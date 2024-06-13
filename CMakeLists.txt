@@ -1,8 +1,10 @@
-cmake_minimum_required(VERSION 3.10)
-set(CMAKE_CXX_COMPILER "gcc")
+cmake_minimum_required(VERSION 3.0)
+set(CMAKE_CXX_STANDARD 11)
+project(mqttSender VERSION 1.0.0)
 
-project(MQTT)
+find_package(PahoMqttCpp REQUIRED)
+find_package(eclipse-paho-mqtt-c REQUIRED)
 
-add_executable(mqtt src/main.c)
+add_executable(out src/main.cc)
+target_link_libraries(out paho-mqttpp3)
 
-target_include_directories(mqtt PRIVATE include)
