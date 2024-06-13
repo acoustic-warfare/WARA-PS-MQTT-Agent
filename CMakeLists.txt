@@ -6,5 +6,4 @@ find_package(PahoMqttCpp REQUIRED)
 find_package(eclipse-paho-mqtt-c REQUIRED)
 
 add_executable(out src/main.cc)
-target_link_libraries(out paho-mqttpp3)
-
+target_link_libraries(out paho-mqttpp3 paho-mqtt3as)
