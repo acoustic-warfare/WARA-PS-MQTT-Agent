@@ -6,6 +6,7 @@ int main()
 {
     mqtt_client client("test", "mqtt://test.mosquitto.org:1883");
     std::cout << "Client created" << std::endl;
-    sleep(10);
+    client.start();
+
     return 0;
 }

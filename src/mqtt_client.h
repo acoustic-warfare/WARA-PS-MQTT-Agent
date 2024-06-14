@@ -13,10 +13,13 @@ private:
     std::string generate_agent_uuid() const;
     std::thread heartbeat_thread;
 
-    std::shared_ptr<mqtt::async_client> client;
+    mqtt::async_client client;
     std::shared_ptr<bool> is_running = std::make_shared<bool>(false);
 
 public:
     mqtt_client(std::string name, std::string server_address);
     ~mqtt_client();
+    bool running() const;
+    void start();
+    void stop();
 };
