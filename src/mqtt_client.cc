@@ -20,7 +20,7 @@ void mqtt_client::start()
                                    {
         while (*is_running)
         {
-            client.publish("heartbeat", "ba bump", 1, false);
+            client.publish("heartbeat", "ba bump", QOS_AT_LEAST_ONCE, false);
             sleep(1);
         } });
     while (*is_running)
@@ -32,13 +32,28 @@ void mqtt_client::start()
             break;
         }
 
-        if (msg->to_string() == "stop")
+        bool stopping = handleMessage(msg);
+        if (stopping)
         {
             this->stop();
             break;
         }
+
         std::cout << "Received message: " << msg->to_string() << std::endl;
     }
+}
+
+bool mqtt_client::handleMessage(mqtt::const_message_ptr msg)
+{
+    if (msg->get_topic() == "commands")
+    {
+        std::string payload = msg->to_string();
+        if (payload == "stop")
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool mqtt_client::running() const

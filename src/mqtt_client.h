@@ -22,4 +22,5 @@ public:
     bool running() const;
     void start();
     void stop();
+    bool handleMessage(mqtt::const_message_ptr msg);
 };
