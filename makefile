@@ -3,7 +3,7 @@ BUILD_DIR := build
 all: build
 
 run: build
-	./${BUILD_DIR}/main
+	./${BUILD_DIR}/mqtt_client
 
 build: 
 	cmake -S . -B ${BUILD_DIR}
