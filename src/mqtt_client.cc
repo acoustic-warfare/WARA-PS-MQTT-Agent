@@ -1,4 +1,4 @@
-#include "mqtt_client.h"
+#include "mqtt_client.hpp"
 
 #define QOS_AT_MOST_ONCE 0
 #define QOS_AT_LEAST_ONCE 1
@@ -7,9 +7,22 @@
 #include <thread>
 #include <unistd.h>
 
-std::string mqtt_client::generate_agent_uuid() const
+const bool RETAIN = false;
+const std::string TOPIC_PREFIX = "waraps/unit/ground/real/ljudkriget/";
+
+std::string mqtt_client::generate_agent_uuid()
 {
+    // TODO: Fixa denna, typ requesta från brokern?
     return "0";
+}
+
+std::string mqtt_client::generate_full_topic(std::string topic) const
+{
+    return TOPIC_PREFIX + "/" + topic;
+}
+
+std::string mqtt_client::generate_heartbeat_message() const
+{
 }
 
 void mqtt_client::start()
@@ -18,9 +31,11 @@ void mqtt_client::start()
     is_running = std::make_shared<bool>(true);
     heartbeat_thread = std::thread([this]()
                                    {
+        std::string heartbeat_topic = generate_full_topic("heartbeat");
+        std::string heartbeat_message = generate_heartbeat_message();
         while (*is_running)
         {
-            client.publish("heartbeat", "ba bump", QOS_AT_LEAST_ONCE, false);
+            client.publish(heartbeat_topic, "ba bump", QOS_AT_LEAST_ONCE, RETAIN);
             sleep(1);
         } });
     while (*is_running)
@@ -32,7 +47,7 @@ void mqtt_client::start()
             break;
         }
 
-        bool stopping = handleMessage(msg);
+        bool stopping = handle_message(msg);
         if (stopping)
         {
             this->stop();
@@ -43,7 +58,7 @@ void mqtt_client::start()
     }
 }
 
-bool mqtt_client::handleMessage(mqtt::const_message_ptr msg)
+bool mqtt_client::handle_message(mqtt::const_message_ptr msg)
 {
     if (msg->get_topic() == "commands")
     {
@@ -56,6 +71,13 @@ bool mqtt_client::handleMessage(mqtt::const_message_ptr msg)
     return false;
 }
 
+bool mqtt_client::publish_message_async(std::string topic, std::string payload)
+{
+    std::string full_topic = generate_full_topic(topic);
+    mqtt::delivery_token_ptr token = client.publish(full_topic, payload, QOS_AT_LEAST_ONCE, RETAIN);
+    return token->get_message_id() != -1;
+}
+
 bool mqtt_client::running() const
 {
     return *is_running;
@@ -63,12 +85,14 @@ bool mqtt_client::running() const
 
 void mqtt_client::stop()
 {
-    *is_running = false;
     std::cout << "Shutting down" << std::endl;
+    *is_running = false;
     heartbeat_thread.join();
     client.stop_consuming();
     client.disconnect()->wait();
 }
+
+// ctors and dtors
 
 mqtt_client::mqtt_client(std::string name, std::string server_address)
     : UNIT_NAME(name), SERVER_ADDRESS(server_address), client(SERVER_ADDRESS, generate_agent_uuid())
@@ -81,4 +105,19 @@ mqtt_client::mqtt_client(std::string name, std::string server_address)
     }
 
     client.subscribe("commands", QOS_AT_LEAST_ONCE)->wait();
+}
+
+// no copying, moving or assigning
+mqtt_client::mqtt_client(const mqtt_client &other) = delete;
+mqtt_client &mqtt_client::operator=(const mqtt_client &other) = delete;
+mqtt_client::mqtt_client(mqtt_client &&other) = delete;
+mqtt_client &mqtt_client::operator=(mqtt_client &&other) = delete;
+
+mqtt_client::~mqtt_client()
+{
+    std::cout << "Destroying client" << std::endl;
+    if (running())
+    {
+        stop();
+    }
 }
