@@ -1,5 +1,8 @@
 #include "mqtt_client.hpp"
 #include <nlohmann/json.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #define QOS_AT_MOST_ONCE 0
 #define QOS_AT_LEAST_ONCE 1
@@ -13,10 +16,10 @@ using json = nlohmann::json;
 const bool RETAIN = false;
 const std::string TOPIC_PREFIX = "waraps/unit/ground/real/ljudkriget/";
 
-std::string mqtt_client::generate_agent_uuid()
+std::string mqtt_client::generate_uuid()
 {
-    // TODO: Fixa denna, typ requesta från brokern?
-    return "0";
+    boost::uuids::uuid uuid = boost::uuids::random_generator()();
+    return boost::uuids::to_string(uuid);
 }
 
 std::string mqtt_client::generate_full_topic(std::string topic) const
@@ -28,12 +31,12 @@ std::string mqtt_client::generate_heartbeat_message() const
 {
     json j = {
         {"agent-type", "surface"},
-        {"agent-uuid", 0},
+        {"agent-uuid", uuid},
         {"levels", {"sensor", "direct execution"}},
         {"name", "ljudkriget"},
         {"rate", heartbeat_interval.count() / 1000},
-        {"stamp", std::chrono::system_clock::now().time_since_epoch().count()},
-        {"type", "heartbeat"}};
+        {"stamp", (double)std::chrono::system_clock::now().time_since_epoch().count() / 1000.0},
+        {"type", "HeartBeat"}};
 
     return j.dump(4); // Pretty print with 4 spaces indentation
 }
@@ -45,9 +48,9 @@ void mqtt_client::start()
     heartbeat_thread = std::thread([this]()
                                    {
         std::string heartbeat_topic = generate_full_topic("heartbeat");
-        std::string heartbeat_message = generate_heartbeat_message();
         while (*is_running)
         {
+            std::string heartbeat_message = generate_heartbeat_message();
             client.publish(heartbeat_topic, heartbeat_message, QOS_AT_LEAST_ONCE, RETAIN);
             sleep(1);
         } });
@@ -75,15 +78,33 @@ void mqtt_client::start()
 
 bool mqtt_client::handle_message(mqtt::const_message_ptr msg)
 {
-    if (msg->get_topic() == generate_full_topic("commands"))
+    json msg_payload = json::parse(msg->to_string());
+
+    if (msg->get_topic() == generate_full_topic("exec/command"))
     {
-        std::string payload = msg->to_string();
-        if (payload == "stop")
+        std::string command = msg_payload["command"];
+        if (command == "stop")
         {
             return true;
         }
+        else if (command == "ping")
+        {
+            pong(msg_payload);
+            return false;
+        }
     }
     return false;
+}
+
+void mqtt_client::pong(json msg_payload)
+{
+    json response = {
+        {"agent-uuid", uuid},
+        {"com-uuid", generate_uuid()},
+        {"response", "pong"},
+        {"response-to", msg_payload["com-uuid"]}};
+    std::string response_topic = generate_full_topic("exec/response");
+    client.publish(response_topic, response.dump(4), QOS_AT_LEAST_ONCE, RETAIN);
 }
 
 bool mqtt_client::publish_message_async(std::string topic, std::string payload)
@@ -110,7 +131,7 @@ void mqtt_client::stop()
 // ctors and dtors
 
 mqtt_client::mqtt_client(std::string name, std::string server_address)
-    : UNIT_NAME(name), SERVER_ADDRESS(server_address), client(SERVER_ADDRESS, generate_agent_uuid())
+    : UNIT_NAME(name), SERVER_ADDRESS(server_address), client(SERVER_ADDRESS, uuid)
 {
     std::cout << "Creating client and connecting to server" << std::endl;
     bool connected = client.connect()->wait_for(std::chrono::seconds(5));
@@ -121,7 +142,7 @@ mqtt_client::mqtt_client(std::string name, std::string server_address)
 
     std::cout << "Connected to server" << std::endl;
 
-    client.subscribe(generate_full_topic("commands"), QOS_AT_LEAST_ONCE)->wait();
+    client.subscribe(generate_full_topic("exec/command"), QOS_AT_LEAST_ONCE)->wait();
 }
 
 // no copying, moving or assigning

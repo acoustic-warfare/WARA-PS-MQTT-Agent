@@ -1,6 +1,7 @@
 #pragma once
 #include <mqtt/async_client.h>
 #include <string>
+#include <nlohmann/json.hpp>
 
 #define DEFAULT_HEARTBEAT_INTERVAL 1000
 
@@ -11,10 +12,12 @@ private:
         std::chrono::milliseconds(DEFAULT_HEARTBEAT_INTERVAL);
     const std::string UNIT_NAME, SERVER_ADDRESS;
 
-    std::string static generate_agent_uuid();
+    std::string static generate_uuid();
     std::string generate_full_topic(std::string topic) const;
     std::string generate_heartbeat_message() const;
+    void pong(nlohmann::json msg_payload);
 
+    std::string uuid = generate_uuid();
     std::thread heartbeat_thread;
     mqtt::async_client client;
     std::shared_ptr<bool> is_running = std::make_shared<bool>(false);
