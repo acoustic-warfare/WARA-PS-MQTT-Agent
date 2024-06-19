@@ -8,6 +8,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <utility>
 
 #define QOS_AT_MOST_ONCE 0
 #define QOS_AT_LEAST_ONCE 1
@@ -24,7 +25,7 @@ std::string waraps_client::generate_uuid()
     return boost::uuids::to_string(uuid);
 }
 
-std::string waraps_client::generate_full_topic(std::string topic) const
+std::string waraps_client::generate_full_topic(const std::string& topic)
 {
     return TOPIC_PREFIX + topic;
 }
@@ -69,13 +70,13 @@ void waraps_client::start()
                 break;
             }
 
-            bool stopping = handle_message(msg);
+            handle_message(msg);
 
             std::cout << "Received message: " << msg->to_string() << std::endl;
         } });
 }
 
-bool waraps_client::handle_message(mqtt::const_message_ptr msg)
+bool waraps_client::handle_message(const mqtt::const_message_ptr& msg)
 {
     json msg_payload = json::parse(msg->to_string());
 
@@ -110,20 +111,20 @@ void waraps_client::cmd_pong(json msg_payload)
     client.publish(response_topic, response.dump(4), QOS_AT_LEAST_ONCE, RETAIN);
 }
 
-bool waraps_client::publish_message_async(std::string topic, std::string payload)
+bool waraps_client::publish_message_async(const std::string& topic, const std::string& payload)
 {
     std::string full_topic = generate_full_topic(topic);
     mqtt::delivery_token_ptr token = client.publish(full_topic, payload, QOS_AT_LEAST_ONCE, RETAIN);
     return token->get_message_id() != -1;
 }
 
-void waraps_client::set_message_callback(std::string topic, std::function<void(waraps_client *, nlohmann::json)> callback)
+void waraps_client::set_message_callback(const std::string& topic, std::function<void(waraps_client *, nlohmann::json)> callback)
 {
     if (topic == "exec/command")
     {
         throw std::invalid_argument("Cannot set callback for command topic, use set_command_callback instead");
     }
-    message_callbacks[topic] = callback;
+    message_callbacks[topic] = std::move(callback);
 }
 
 bool waraps_client::running() const
@@ -143,7 +144,7 @@ void waraps_client::stop()
 // ctors and dtors
 
 waraps_client::waraps_client(std::string name, std::string server_address)
-    : UNIT_NAME(name), SERVER_ADDRESS(server_address), client(SERVER_ADDRESS, uuid)
+    : UNIT_NAME(std::move(name)), SERVER_ADDRESS(std::move(server_address)), client(SERVER_ADDRESS, uuid)
 {
     std::cout << "Creating client and connecting to server" << std::endl;
     bool connected = client.connect()->wait_for(std::chrono::seconds(5));

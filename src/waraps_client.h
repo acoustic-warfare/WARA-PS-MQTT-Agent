@@ -21,9 +21,9 @@ private:
     const std::string UNIT_NAME, SERVER_ADDRESS;
 
     std::string static generate_uuid();
-    std::string generate_full_topic(std::string topic) const;
+    static std::string generate_full_topic(const std::string& topic) ;
     std::string generate_heartbeat_message() const;
-    bool handle_message(mqtt::const_message_ptr msg);
+    bool handle_message(const mqtt::const_message_ptr& msg);
     void cmd_pong(nlohmann::json msg_payload);
     void cmd_stop(nlohmann::json msg_payload);
 
@@ -75,7 +75,7 @@ public:
      * @param topic The topic to publish the message to, will be added to WARA PS topic prefix
      * @param payload The message to publish as a JSON string
      */
-    bool publish_message_async(std::string topic, std::string payload);
+    bool publish_message_async(const std::string& topic, const std::string& payload);
 
     /**
      * Set an asyncronous callback function to be called when a message is recieved on the specified topic.
@@ -84,7 +84,7 @@ public:
      * @param callback the function to call when a message is recieved on the specified topic, takes waraps_client as a parameter to allow for state changes if needed.
      * @throws std::invalid_argument if the topic is "exec/command"
      */
-    void set_message_callback(std::string topic, std::function<void(waraps_client *, nlohmann::json)> callback);
+    void set_message_callback(const std::string& topic, std::function<void(waraps_client *, nlohmann::json)> callback);
 
     /**
      * Set an asyncronous callback function to be called when a message is recieved on the specified topic.
