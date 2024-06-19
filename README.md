@@ -1,4 +1,4 @@
-# MQTT-Communication
+# WARA-PS-MQTT-Agent
 MQTT Bridge designed to work with ljudkriget beamforming and WARA PS MQTT API for control and sensor output.
 
 ## Requirements
