@@ -10,6 +10,8 @@
  * A class to handle MQTT communication with the WARA PS MQTT broker.
  * Built to WARA PS message specifications as a L2 unit.
  * For more info see https://api.docs.waraps.org/
+ *
+ * Author: Janne Schyffert
  */
 class waraps_client
 {
@@ -21,16 +23,22 @@ private:
     std::string static generate_uuid();
     std::string generate_full_topic(std::string topic) const;
     std::string generate_heartbeat_message() const;
-    void pong(nlohmann::json msg_payload);
     bool handle_message(mqtt::const_message_ptr msg);
+    void cmd_pong(nlohmann::json msg_payload);
+    void cmd_stop(nlohmann::json msg_payload);
+
+    // Commands get a separate function and map to allow different command callbacks as well as user-defined command callbacks
     void handle_command(nlohmann::json msg_payload);
 
     std::string uuid = generate_uuid();
-    std::thread heartbeat_thread;
+    std::thread heartbeat_thread, consume_thread;
     mqtt::async_client client;
     std::shared_ptr<bool> is_running = std::make_shared<bool>(false);
-    std::map<std::string, std::function<void(waraps_client, nlohmann::json)>> message_callbacks{
+    std::map<std::string, std::function<void(waraps_client *, nlohmann::json)>> message_callbacks{
         {"exec/command", &waraps_client::handle_command}};
+    std::map<std::string, std::function<void(waraps_client *, nlohmann::json)>> command_callbacks{
+        {"stop", &waraps_client::cmd_stop},
+        {"pong", &waraps_client::cmd_pong}};
 
 public:
     waraps_client(std::string name, std::string server_address);
@@ -52,8 +60,8 @@ public:
     bool running() const;
 
     /**
-     * Start the heartbeat thread and begin consuming messages from the MQTT server.
-     * Will block the thread until a stop command is recieved via MQTT or timeout.
+     * Start main thread and heartbeat thread and begin consuming messages from the MQTT server.
+     * Will not block the current thread.
      */
     void start();
 
@@ -71,15 +79,19 @@ public:
 
     /**
      * Set an asyncronous callback function to be called when a message is recieved on the specified topic.
-     * @param topic the topic to listen on, will be added to WARA PS topic prefix
+     * Disallows setting the "command" topic callback, see set_command_callback for that.
+     * @param topic the topic to listen on, will be added to WARA PS topic prefix.
      * @param callback the function to call when a message is recieved on the specified topic, takes waraps_client as a parameter to allow for state changes if needed.
+     * @throws std::invalid_argument if the topic is "exec/command"
      */
-    void set_message_callback(std::string topic, std::function<void(waraps_client, nlohmann::json)> callback);
+    void set_message_callback(std::string topic, std::function<void(waraps_client *, nlohmann::json)> callback);
 
     /**
      * Set an asyncronous callback function to be called when a message is recieved on the specified topic.
-     * @param topic the topic to listen on, will be added to WARA PS topic prefix
+     * Disallows setting the "command" topic callback, see set_command_callback for that.
+     * @param topic the topic to listen on, will be added to WARA PS topic prefix.
      * @param callback the function to call when a message is recieved on the specified topic
+     * @throws std::invalid_argument if the topic is "exec/command"
      */
     void set_message_callback(std::string topic, std::function<void(nlohmann::json)> callback);
 };

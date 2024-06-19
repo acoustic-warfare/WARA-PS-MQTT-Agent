@@ -1,12 +1,16 @@
 #include <iostream>
-#include "mqtt_client.h"
+#include "waraps_client.h"
 #include <unistd.h>
 
 int main()
 {
-    mqtt_client client("test", "mqtt://localhost:25565");
+    waraps_client client("test", "mqtt://localhost:25565");
     std::cout << "Client created" << std::endl;
     client.start();
+
+    while(client.running()) {
+        sleep(5);
+    }
 
     return 0;
 }

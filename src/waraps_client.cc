@@ -56,26 +56,23 @@ void waraps_client::start()
             client.publish(heartbeat_topic, heartbeat_message, QOS_AT_LEAST_ONCE, RETAIN);
             sleep(1);
         } });
-    while (*is_running)
-    {
-        auto msg = client.consume_message();
-        if (!msg) // Something has gone very wrong
-        {
-            std::cerr << "Failed to consume message" << std::endl;
-            this->stop();
-            break;
-        }
 
-        bool stopping = handle_message(msg);
-        if (stopping)
+    consume_thread = std::thread([this]()
+                                 {
+        while (*is_running)
         {
-            std::cout << "Stop command recieved" << std::endl;
-            this->stop();
-            break;
-        }
+            auto msg = client.consume_message();
+            if (!msg) // Something has gone very wrong
+            {
+                std::cerr << "Failed to consume message: " << msg <<  std::endl;
+                this->stop();
+                break;
+            }
 
-        std::cout << "Received message: " << msg->to_string() << std::endl;
-    }
+            bool stopping = handle_message(msg);
+
+            std::cout << "Received message: " << msg->to_string() << std::endl;
+        } });
 }
 
 bool waraps_client::handle_message(mqtt::const_message_ptr msg)
@@ -84,21 +81,25 @@ bool waraps_client::handle_message(mqtt::const_message_ptr msg)
 
     if (msg->get_topic() == generate_full_topic("exec/command"))
     {
-        std::string command = msg_payload["command"];
-        if (command == "stop")
-        {
-            return true;
-        }
-        else if (command == "ping")
-        {
-            pong(msg_payload);
-            return false;
-        }
+        handle_command(msg_payload);
+    }
+    else
+    {
+        message_callbacks[msg->get_topic()](this, msg_payload);
     }
     return false;
 }
 
-void waraps_client::pong(json msg_payload)
+void waraps_client::cmd_stop(nlohmann::json msg_payload)
+{
+}
+
+void waraps_client::handle_command(nlohmann::json msg_payload)
+{
+    command_callbacks[msg_payload["command"]](this, msg_payload);
+}
+
+void waraps_client::cmd_pong(json msg_payload)
 {
     json response = {
         {"agent-uuid", uuid},
@@ -116,8 +117,12 @@ bool waraps_client::publish_message_async(std::string topic, std::string payload
     return token->get_message_id() != -1;
 }
 
-void waraps_client::set_message_callback(std::string topic, std::function<void(waraps_client, nlohmann::json)> callback)
+void waraps_client::set_message_callback(std::string topic, std::function<void(waraps_client *, nlohmann::json)> callback)
 {
+    if (topic == "exec/command")
+    {
+        throw std::invalid_argument("Cannot set callback for command topic, use set_command_callback instead");
+    }
     message_callbacks[topic] = callback;
 }
 
@@ -154,7 +159,6 @@ waraps_client::waraps_client(std::string name, std::string server_address)
 
 waraps_client::~waraps_client()
 {
-    std::cout << "Destroying client" << std::endl;
     if (running())
     {
         stop();
