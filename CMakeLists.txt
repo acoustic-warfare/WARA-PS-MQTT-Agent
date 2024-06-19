@@ -1,10 +1,16 @@
 cmake_minimum_required(VERSION 3.0)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 project(mqttSender VERSION 1.0.0)
 
 find_package(PahoMqttCpp REQUIRED)
 find_package(eclipse-paho-mqtt-c REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
+find_package(Boost REQUIRED)
 
-add_executable(mqtt_client src/mqtt_client.cc src/main.cc)
+add_library(mqtt_client_lib src/waraps_client.cc)
+set_target_properties(mqtt_client_lib PROPERTIES PUBLIC_HEADER src/mqtt_client.h)
+add_executable(mqtt_client src/main.cc src/waraps_client.cc)
+target_include_directories(mqtt_client PUBLIC ${Boost_INCLUDE_DIRS})
+target_include_directories(mqtt_client_lib PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(mqtt_client paho-mqttpp3 paho-mqtt3as nlohmann_json::nlohmann_json)
+target_link_libraries(mqtt_client_lib paho-mqttpp3 paho-mqtt3as nlohmann_json::nlohmann_json)
