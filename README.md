@@ -1,28 +1,50 @@
 # WARA-PS-MQTT-Agent
+
 MQTT Bridge designed to work with ljudkriget beamforming and WARA PS MQTT API for control and sensor output.
 
 ## Requirements
+
 The following libraries are needed:
+
 - PahoMqttCpp
 - nlohmann/json
 - boost/uuid
 
-## Running the client
-Simply `make run` in the root directory will build and run the client.
+## Installing the library
+
+To install the library, install the needed dependencies and run:
+
+```bash
+mkdir build
+cd build
+cmake ..
+sudo make install
+```
 
 ## Usage
-Create a client object with a given name and MQTT broker adress and call the `start()` member function to run the client, this will occupy the main thread until aborted.
+
+Create a client object with a given name and MQTT broker adress and call the `start()` member function to run the
+client, this will occupy the main thread until aborted.
 
 Example:
+
 ```cpp
 #include <iostream>
-#include "mqtt_client.hpp"
+#include <WaraPSClient.h>
+#include <unistd.h>
 
-int main()
-{
-    mqtt_client client("test", "mqtt://localhost:25565");
+int main() {
+    WaraPSClient client("test", "mqtt://localhost:25565");
     std::cout << "Client created" << std::endl;
-    client.start();
+    std::thread client_thread = client.start();
+
+    auto f = [&](const nlohmann::json &_) {
+        client.publish_message("exec/response", std::string("AAAAAAAAAAA"));
+    };
+
+    client.set_command_callback("scream", f);
+
+    client_thread.join();
 
     return 0;
 }
