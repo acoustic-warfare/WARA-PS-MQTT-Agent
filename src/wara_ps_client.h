@@ -17,34 +17,34 @@ class WaraPSClient {
 private:
     const std::chrono::milliseconds heartbeat_interval =
             std::chrono::milliseconds(DEFAULT_HEARTBEAT_INTERVAL);
-    const std::string UUID = generate_uuid();
-    const std::string UNIT_NAME, SERVER_ADDRESS;
+    const std::string kUUID = GenerateUUID();
+    const std::string kUnitName, kServerAddress;
 
-    std::string static generate_uuid();
+    std::string static GenerateUUID();
 
-    static std::string generate_full_topic(const std::string &topic);
+    static std::string GenerateFullTopic(const std::string &topic);
 
-    std::string generate_heartbeat_message() const;
+    std::string GenerateHeartBeatMessage() const;
 
-    void handle_message(const mqtt::const_message_ptr &msg);
+    void HandleMessage(const mqtt::const_message_ptr &msg);
 
-    void cmd_pong(nlohmann::json msg_payload);
+    void CmdPong(nlohmann::json msg_payload);
 
-    void cmd_stop(nlohmann::json msg_payload);
+    void CmdStop(nlohmann::json msg_payload);
 
     // Commands get a separate function and map to allow different command callbacks as well as user-defined command callbacks
-    void handle_command(nlohmann::json msg_payload);
+    void HandleCommand(nlohmann::json msg_payload);
 
-    std::thread heartbeat_thread, consume_thread;
+    std::thread heartbeat_thread_, consume_thread_;
 
-    mqtt::async_client client;
+    mqtt::async_client client_;
 
-    std::shared_ptr<bool> is_running = std::make_shared<bool>(false);
+    std::shared_ptr<bool> is_running_ = std::make_shared<bool>(false);
     std::map<std::string, std::function<void(WaraPSClient *, nlohmann::json)>> message_callbacks{
-            {"exec/command", &WaraPSClient::handle_command}};
+            {"exec/command", &WaraPSClient::HandleCommand}};
     std::map<std::string, std::function<void(WaraPSClient *, nlohmann::json)>> command_callbacks{
-            {"stop", &WaraPSClient::cmd_stop},
-            {"ping", &WaraPSClient::cmd_pong}};
+            {"stop", &WaraPSClient::CmdStop},
+            {"ping", &WaraPSClient::CmdPong}};
 
 public:
     WaraPSClient(std::string name, std::string server_address);
@@ -72,19 +72,19 @@ public:
      * Start main thread and heartbeat thread and begin consuming messages from the MQTT server.
      * Will not block the current thread.
      */
-    std::thread start();
+    std::thread Start();
 
     /**
      * Stop consuming messages and disable the heartbeat thread, allowing the client to be destroyed.
      */
-    void stop();
+    void Stop();
 
     /**
      * Publish a message to the MQTT server asynchronously.
      * @param topic The topic to publish the message to, will be added to WARA PS topic prefix
      * @param payload The message to publish as a JSON string
      */
-    void publish_message(const std::string &topic, const std::string &payload);
+    void PublishMessage(const std::string &topic, const std::string &payload);
 
     /**
      * Set an asynchronous callback function to be called when a message is received on the specified topic.
@@ -93,7 +93,7 @@ public:
      * @param callback the function to call when a message is received on the specified topic, takes waraps_client as a parameter to allow for state changes if needed.
      * @throws std::invalid_argument if the topic is "exec/command"
      */
-    void set_message_callback(const std::string &topic, std::function<void(WaraPSClient *, nlohmann::json)> callback);
+    void SetMessageCallback(const std::string &topic, std::function<void(WaraPSClient *, nlohmann::json)> callback);
 
     /**
      * Set an asynchronous callback function to be called when a message is received on the specified topic.
@@ -102,7 +102,7 @@ public:
      * @param callback the function to call when a message is received on the specified topic
      * @throws std::invalid_argument if the topic is "exec/command"
      */
-    void set_message_callback(const std::string &topic, const std::function<void(nlohmann::json)> &callback);
+    void SetMessageCallback(const std::string &topic, const std::function<void(nlohmann::json)> &callback);
 
     /**
      * Set an asynchronous callback function to be called when a command is received on the /exec/command topic
@@ -110,7 +110,7 @@ public:
      * @param callback The callback to use
      * @throws std::invalid_argument if the reserved commands "ping" or "stop" are given
      */
-    void set_command_callback(const std::string &command, const std::function<void(nlohmann::json)> &callback);
+    void SetCommandCallback(const std::string &command, const std::function<void(nlohmann::json)> &callback);
 };
 
 #endif

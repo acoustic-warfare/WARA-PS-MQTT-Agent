@@ -11,15 +11,15 @@ find_package(Boost REQUIRED)
 
 configure_file(cmake/waraPsClient.pc.in waraPsClient.pc @ONLY)
 
-add_library(WaraPSClient src/WaraPSClient.cc)
-add_executable(WaraPSClientTest src/WaraPSClientTest.cc src/WaraPSClient.cc)
+add_library(WaraPSClient src/wara_ps_client.cc)
+add_executable(WaraPSClientTest src/wara_ps_client_test.cc src/wara_ps_client.cc)
 
 target_link_libraries(WaraPSClientTest
         WaraPSClient
 )
 
 set_target_properties(WaraPSClient PROPERTIES
-        PUBLIC_HEADER src/WaraPSClient.h
+        PUBLIC_HEADER src/wara_ps_client.h
         VERSION ${PROJECT_VERSION}
         SOVERSION 1
         EXPORT_NAME WaraPSClient
