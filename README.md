@@ -23,8 +23,8 @@ sudo make install
 
 ## Usage
 
-Create a client object with a given name and MQTT broker adress and call the `start()` member function to run the
-client, this will occupy the main thread until aborted.
+Create a client_ object with a given name and MQTT broker adress and call the `start()` member function to run the
+client_, this will occupy the main thread until aborted.
 
 Example:
 
@@ -34,15 +34,15 @@ Example:
 #include <unistd.h>
 
 int main() {
-    WaraPSClient client("test", "mqtt://localhost:25565");
+    WaraPSClient client_("test", "mqtt://localhost:25565");
     std::cout << "Client created" << std::endl;
-    std::thread client_thread = client.start();
+    std::thread client_thread = client_.start();
 
     auto f = [&](const nlohmann::json &_) {
-        client.publish_message("exec/response", std::string("AAAAAAAAAAA"));
+        client_.publish_message("exec/response", std::string("AAAAAAAAAAA"));
     };
 
-    client.set_command_callback("scream", f);
+    client_.set_command_callback("scream", f);
 
     client_thread.join();
 

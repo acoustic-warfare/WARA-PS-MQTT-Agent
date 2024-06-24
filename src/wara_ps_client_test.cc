@@ -1,17 +1,17 @@
 #include <iostream>
-#include "WaraPSClient.h"
+#include "wara_ps_client.h"
 #include <unistd.h>
 
 int main() {
     WaraPSClient client("test", "mqtt://localhost:25565");
     std::cout << "Client created" << std::endl;
-    std::thread client_thread = client.start();
+    std::thread client_thread = client.Start();
 
     auto f = [&](const nlohmann::json &_) {
-        client.publish_message("exec/response", std::string("AAAAAAAAAAA"));
+        client.PublishMessage("exec/response", std::string("AAAAAAAAAAA"));
     };
 
-    client.set_command_callback("scream", f);
+    client.SetCommandCallback("scream", f);
 
     client_thread.join();
 
