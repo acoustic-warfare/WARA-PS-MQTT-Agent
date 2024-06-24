@@ -1,9 +1,9 @@
 #include <iostream>
-#include "waraps_client.h"
+#include "WaraPSClient.h"
 #include <unistd.h>
 
 int main() {
-    waraps_client client("test", "mqtt://localhost:25565");
+    WaraPSClient client("test", "mqtt://localhost:25565");
     std::cout << "Client created" << std::endl;
     std::thread client_thread = client.start();
 

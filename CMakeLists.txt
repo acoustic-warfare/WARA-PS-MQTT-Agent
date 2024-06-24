@@ -11,9 +11,15 @@ find_package(Boost REQUIRED)
 
 configure_file(waraPsClient.pc.in waraPsClient.pc @ONLY)
 
-add_library(WaraPSClient src/waraps_client.cc)
+add_library(WaraPSClient src/WaraPSClient.cc)
+add_executable(WaraPSClientTest src/WaraPSClientTest.cc src/WaraPSClient.cc)
+
+target_link_libraries(WaraPSClientTest
+        WaraPSClient
+)
+
 set_target_properties(WaraPSClient PROPERTIES
-        PUBLIC_HEADER include/waraps_client.h
+        PUBLIC_HEADER src/WaraPSClient.h
         VERSION ${PROJECT_VERSION}
         SOVERSION 1
         EXPORT_NAME WaraPSClient
@@ -22,7 +28,7 @@ target_include_directories(WaraPSClient PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(WaraPSClient
         paho-mqttpp3
         paho-mqtt3as
-        nlohmann_json
+        nlohmann_json::nlohmann_json
 )
 
 include(GNUInstallDirs)
