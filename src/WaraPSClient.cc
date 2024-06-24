@@ -1,4 +1,4 @@
-#include "waraps_client.h"
+#include "WaraPSClient.h"
 
 #include <thread>
 #include <unistd.h>
@@ -17,19 +17,19 @@ using json = nlohmann::json;
 const bool RETAIN = false;
 const std::string TOPIC_PREFIX = "waraps/unit/ground/real/ljudkriget/";
 
-std::string waraps_client::generate_uuid() {
+std::string WaraPSClient::generate_uuid() {
     boost::uuids::uuid uuid = boost::uuids::random_generator()();
     return boost::uuids::to_string(uuid);
 }
 
-std::string waraps_client::generate_full_topic(const std::string &topic) {
+std::string WaraPSClient::generate_full_topic(const std::string &topic) {
     return TOPIC_PREFIX + topic;
 }
 
-std::string waraps_client::generate_heartbeat_message() const {
+std::string WaraPSClient::generate_heartbeat_message() const {
     json j = {
             {"agent-type", "surface"},
-            {"agent-uuid", uuid},
+            {"agent-uuid", UUID},
             {"levels",     {"sensor", "direct execution"}},
             {"name",       "ljudkriget"},
             {"rate",       heartbeat_interval.count() / 1000},
@@ -39,7 +39,7 @@ std::string waraps_client::generate_heartbeat_message() const {
     return j.dump(4); // Pretty print with 4 spaces indentation
 }
 
-std::thread waraps_client::start() {
+std::thread WaraPSClient::start() {
     client.start_consuming();
     is_running = std::make_shared<bool>(true);
     heartbeat_thread = std::thread([this]() {
@@ -69,7 +69,7 @@ std::thread waraps_client::start() {
     return std::move(consume_thread);
 }
 
-void waraps_client::handle_message(const mqtt::const_message_ptr &msg) {
+void WaraPSClient::handle_message(const mqtt::const_message_ptr &msg) {
     json msg_payload = json::parse(msg->to_string());
 
     if (msg->get_topic() == generate_full_topic("exec/command")) {
@@ -83,9 +83,9 @@ void waraps_client::handle_message(const mqtt::const_message_ptr &msg) {
     }
 }
 
-void waraps_client::cmd_stop(nlohmann::json msg_payload) {
+void WaraPSClient::cmd_stop(nlohmann::json msg_payload) {
     json response = {
-            {"agent-uuid",  uuid},
+            {"agent-uuid",  UUID},
             {"com-uuid",    generate_uuid()},
             {"response",    "stopped"},
             {"response-to", msg_payload["com-uuid"]}};
@@ -94,7 +94,7 @@ void waraps_client::cmd_stop(nlohmann::json msg_payload) {
     stop();
 }
 
-void waraps_client::handle_command(nlohmann::json msg_payload) {
+void WaraPSClient::handle_command(nlohmann::json msg_payload) {
     if (!command_callbacks.contains(msg_payload["command"])) {
         std::cout << "Bad command received: " << msg_payload["command"] << std::endl;
         return;
@@ -102,9 +102,9 @@ void waraps_client::handle_command(nlohmann::json msg_payload) {
     command_callbacks[msg_payload["command"]](this, msg_payload);
 }
 
-void waraps_client::cmd_pong(json msg_payload) {
+void WaraPSClient::cmd_pong(json msg_payload) {
     json response = {
-            {"agent-uuid",  uuid},
+            {"agent-uuid",  UUID},
             {"com-uuid",    generate_uuid()},
             {"response",    "pong"},
             {"response-to", msg_payload["com-uuid"]}};
@@ -112,24 +112,24 @@ void waraps_client::cmd_pong(json msg_payload) {
     client.publish(response_topic, response.dump(4), QOS_AT_LEAST_ONCE, RETAIN);
 }
 
-void waraps_client::publish_message(const std::string &topic, const std::string &payload) {
+void WaraPSClient::publish_message(const std::string &topic, const std::string &payload) {
     std::string full_topic = generate_full_topic(topic);
     mqtt::delivery_token_ptr token = client.publish(full_topic, payload, QOS_AT_LEAST_ONCE, RETAIN);
 }
 
-void waraps_client::set_message_callback(const std::string &topic,
-                                         std::function<void(waraps_client *, nlohmann::json)> callback) {
+void WaraPSClient::set_message_callback(const std::string &topic,
+                                        std::function<void(WaraPSClient *, nlohmann::json)> callback) {
     if (topic == "exec/command") {
         throw std::invalid_argument("Cannot set callback for command topic, use set_command_callback instead");
     }
     message_callbacks[topic] = std::move(callback);
 }
 
-bool waraps_client::running() const {
+bool WaraPSClient::running() const {
     return *is_running;
 }
 
-void waraps_client::stop() {
+void WaraPSClient::stop() {
     std::cout << "Shutting down" << std::endl;
     *is_running = false;
     heartbeat_thread.join();
@@ -137,8 +137,8 @@ void waraps_client::stop() {
     client.disconnect()->wait();
 }
 
-waraps_client::waraps_client(std::string name, std::string server_address)
-        : UNIT_NAME(std::move(name)), SERVER_ADDRESS(std::move(server_address)), client(SERVER_ADDRESS, uuid) {
+WaraPSClient::WaraPSClient(std::string name, std::string server_address)
+        : UNIT_NAME(std::move(name)), SERVER_ADDRESS(std::move(server_address)), client(SERVER_ADDRESS, UUID) {
     std::cout << "Creating client and connecting to server" << std::endl;
     bool connected = client.connect()->wait_for(std::chrono::seconds(5));
     if (!connected) {
@@ -150,19 +150,19 @@ waraps_client::waraps_client(std::string name, std::string server_address)
     client.subscribe(generate_full_topic("exec/command"), QOS_AT_LEAST_ONCE)->wait();
 }
 
-waraps_client::~waraps_client() {
+WaraPSClient::~WaraPSClient() {
     if (running()) {
         stop();
     }
 }
 
 void
-waraps_client::set_command_callback(const std::string &command, const std::function<void(nlohmann::json)> &callback) {
+WaraPSClient::set_command_callback(const std::string &command, const std::function<void(nlohmann::json)> &callback) {
     if (command == "stop" || command == "ping") {
         throw std::invalid_argument("Cannot set callback for reserved command: " + command);
     }
 
-    command_callbacks[command] = [callback](waraps_client *_, nlohmann::json msg_payload) {
+    command_callbacks[command] = [callback](WaraPSClient *_, nlohmann::json msg_payload) {
         callback(std::move(msg_payload));
     };
 }

@@ -13,10 +13,11 @@
  *
  * Author: Janne Schyffert
  */
-class waraps_client {
+class WaraPSClient {
 private:
     const std::chrono::milliseconds heartbeat_interval =
             std::chrono::milliseconds(DEFAULT_HEARTBEAT_INTERVAL);
+    const std::string UUID = generate_uuid();
     const std::string UNIT_NAME, SERVER_ADDRESS;
 
     std::string static generate_uuid();
@@ -34,31 +35,32 @@ private:
     // Commands get a separate function and map to allow different command callbacks as well as user-defined command callbacks
     void handle_command(nlohmann::json msg_payload);
 
-    std::string uuid = generate_uuid();
     std::thread heartbeat_thread, consume_thread;
+
     mqtt::async_client client;
+
     std::shared_ptr<bool> is_running = std::make_shared<bool>(false);
-    std::map<std::string, std::function<void(waraps_client *, nlohmann::json)>> message_callbacks{
-            {"exec/command", &waraps_client::handle_command}};
-    std::map<std::string, std::function<void(waraps_client *, nlohmann::json)>> command_callbacks{
-            {"stop", &waraps_client::cmd_stop},
-            {"ping", &waraps_client::cmd_pong}};
+    std::map<std::string, std::function<void(WaraPSClient *, nlohmann::json)>> message_callbacks{
+            {"exec/command", &WaraPSClient::handle_command}};
+    std::map<std::string, std::function<void(WaraPSClient *, nlohmann::json)>> command_callbacks{
+            {"stop", &WaraPSClient::cmd_stop},
+            {"ping", &WaraPSClient::cmd_pong}};
 
 public:
-    waraps_client(std::string name, std::string server_address);
+    WaraPSClient(std::string name, std::string server_address);
 
     /**
      * Deleted constructors to disallow copying and moving of the client
      */
-    waraps_client(waraps_client &&) = delete;
+    WaraPSClient(WaraPSClient &&) = delete;
 
-    waraps_client(const waraps_client &) = delete;
+    WaraPSClient(const WaraPSClient &) = delete;
 
-    waraps_client &operator=(const waraps_client &) = delete;
+    WaraPSClient &operator=(const WaraPSClient &) = delete;
 
-    waraps_client &operator=(waraps_client &&) = delete;
+    WaraPSClient &operator=(WaraPSClient &&) = delete;
 
-    ~waraps_client();
+    ~WaraPSClient();
 
     /**
      * Check if the client is running and consuming messages
@@ -91,7 +93,7 @@ public:
      * @param callback the function to call when a message is received on the specified topic, takes waraps_client as a parameter to allow for state changes if needed.
      * @throws std::invalid_argument if the topic is "exec/command"
      */
-    void set_message_callback(const std::string &topic, std::function<void(waraps_client *, nlohmann::json)> callback);
+    void set_message_callback(const std::string &topic, std::function<void(WaraPSClient *, nlohmann::json)> callback);
 
     /**
      * Set an asynchronous callback function to be called when a message is received on the specified topic.
