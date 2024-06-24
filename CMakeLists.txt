@@ -9,7 +9,7 @@ find_package(eclipse-paho-mqtt-c REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(Boost REQUIRED)
 
-configure_file(waraPsClient.pc.in waraPsClient.pc @ONLY)
+configure_file(cmake/waraPsClient.pc.in waraPsClient.pc @ONLY)
 
 add_library(WaraPSClient src/WaraPSClient.cc)
 add_executable(WaraPSClientTest src/WaraPSClientTest.cc src/WaraPSClient.cc)
