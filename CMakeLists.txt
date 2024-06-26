@@ -5,6 +5,7 @@ project(WaraPSClient VERSION 1.0.0)
 # Tacka chatGPT vetja
 
 find_package(PahoMqttCpp REQUIRED)
+find_package(OpenSSL REQUIRED)
 find_package(eclipse-paho-mqtt-c REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(Boost REQUIRED)
@@ -26,8 +27,8 @@ set_target_properties(WaraPSClient PROPERTIES
 )
 target_include_directories(WaraPSClient PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(WaraPSClient
-        paho-mqttpp3
-        paho-mqtt3as
+        PahoMqttCpp::paho-mqttpp3
+        eclipse-paho-mqtt-c::paho-mqtt3as
         nlohmann_json::nlohmann_json
 )
 

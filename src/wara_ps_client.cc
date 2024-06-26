@@ -123,7 +123,7 @@ void WaraPSClient::PublishMessage(const std::string &topic, const std::string &p
 void WaraPSClient::SetMessageCallback(const std::string &topic,
                                       std::function<void(WaraPSClient *, nlohmann::json)> callback) {
     if (topic == "exec/command") {
-        throw std::invalid_argument("Cannot set callback for command topic, use set_command_callback instead");
+        throw std::invalid_argument("Cannot set callback for ''command'' topic, use SetCommandCallback instead");
     }
     message_callbacks[topic] = std::move(callback);
 }
