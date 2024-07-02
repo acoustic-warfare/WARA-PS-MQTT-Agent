@@ -14,18 +14,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(WaraPSClient src/wara_ps_client.cc)
 
-add_executable(WaraPSClientMain src/main.cc)
-
 find_package(PahoMqttCpp REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 target_link_libraries(WaraPSClient
         PUBLIC PahoMqttCpp::paho-mqttpp3
         PUBLIC nlohmann_json::nlohmann_json
-)
-
-target_link_libraries(WaraPSClientMain
-        PRIVATE WaraPSClient
 )
 
 include(GNUInstallDirs)
