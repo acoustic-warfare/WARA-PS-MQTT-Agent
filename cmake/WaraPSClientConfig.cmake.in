@@ -1,5 +1,7 @@
 @PACKAGE_INIT@
 
-include("${CMAKE_CURRENT_LIST_DIR}/WaraPSClientTargets.cmake")
+find_package(PahoMqttCpp REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 check_required_components(WaraPSClient)
+
