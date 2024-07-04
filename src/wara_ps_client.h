@@ -72,7 +72,7 @@ public:
      * Start main thread and heartbeat thread and begin consuming messages from the MQTT server.
      * Will not block the current thread.
      */
-    std::thread Start();
+    void Start();
 
     /**
      * Stop consuming messages and disable the heartbeat thread, allowing the client to be destroyed.

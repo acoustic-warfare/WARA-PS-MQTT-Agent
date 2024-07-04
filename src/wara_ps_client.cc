@@ -39,7 +39,17 @@ std::string WaraPSClient::GenerateHeartBeatMessage() const {
     return j.dump(4); // Pretty print with 4 spaces indentation
 }
 
-std::thread WaraPSClient::Start() {
+void WaraPSClient::Start() {
+
+    std::cout << "Creating client and connecting to server" << std::endl;
+    bool connected = client_.connect()->wait_for(std::chrono::seconds(5));
+    if (!connected) {
+        throw std::runtime_error("Failed to connect to MQTT server");
+    }
+
+    std::cout << "Connected to server" << std::endl;
+
+    client_.subscribe(GenerateFullTopic("exec/command"), QOS_AT_LEAST_ONCE)->wait();
     client_.start_consuming();
     is_running_ = std::make_shared<bool>(true);
     heartbeat_thread_ = std::thread([this]() {
@@ -53,14 +63,11 @@ std::thread WaraPSClient::Start() {
 
     consume_thread_ = std::thread([this]() {
         while (*is_running_) {
-            auto msg = client_.consume_message();
-            if (!msg) // Something has gone very wrong
-            {
-                std::cerr << "Failed to consume message: " << msg << std::endl;
-                this->Stop();
+            auto msg = client_.try_consume_message_for(std::chrono::milliseconds(10));
+            if (!msg && !is_running_) // Client has likely disconnected
                 break;
-            }
-
+            if (!msg)
+                continue;
             try {
                 HandleMessage(msg);
             } catch (std::exception &e) {
@@ -69,7 +76,6 @@ std::thread WaraPSClient::Start() {
             }
         }
     });
-    return std::move(consume_thread_);
 }
 
 void WaraPSClient::HandleMessage(const mqtt::const_message_ptr &msg) {
@@ -94,7 +100,7 @@ void WaraPSClient::CmdStop(nlohmann::json msg_payload) {
             {"response-to", msg_payload["com-uuid"]}};
     std::string response_topic = GenerateFullTopic("exec/response");
     client_.publish(response_topic, response.dump(4), QOS_AT_LEAST_ONCE, kRetain);
-    Stop();
+    *is_running_ = false;
 }
 
 void WaraPSClient::HandleCommand(nlohmann::json msg_payload) {
@@ -138,20 +144,11 @@ void WaraPSClient::Stop() {
     heartbeat_thread_.join();
     client_.stop_consuming();
     client_.disconnect()->wait();
+    consume_thread_.join();
 }
 
 WaraPSClient::WaraPSClient(std::string name, std::string server_address)
-        : kUnitName(std::move(name)), kServerAddress(std::move(server_address)), client_(kServerAddress, kUUID) {
-    std::cout << "Creating client and connecting to server" << std::endl;
-    bool connected = client_.connect()->wait_for(std::chrono::seconds(5));
-    if (!connected) {
-        throw std::runtime_error("Failed to connect to MQTT server");
-    }
-
-    std::cout << "Connected to server" << std::endl;
-
-    client_.subscribe(GenerateFullTopic("exec/command"), QOS_AT_LEAST_ONCE)->wait();
-}
+        : kUnitName(std::move(name)), kServerAddress(std::move(server_address)), client_(kServerAddress, kUUID) {}
 
 WaraPSClient::~WaraPSClient() {
     if (running()) {
