@@ -88,14 +88,14 @@ install(TARGETS WaraPSClient
 install(EXPORT WaraPSClientTargets
         FILE WaraPSClientTargets.cmake
         NAMESPACE WaraPSClient::
-        DESTINATION cmake/WaraPSClient
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/WaraPSClient
 )
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
         cmake/WaraPSClientConfig.cmake.in
         ${CMAKE_CURRENT_BINARY_DIR}/WaraPSClientConfig.cmake
-        INSTALL_DESTINATION cmake/WaraPSClient
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/WaraPSClient
 )
 
 write_basic_package_version_file(
@@ -106,7 +106,7 @@ write_basic_package_version_file(
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/WaraPSClientConfig.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/WaraPSClientConfigVersion.cmake
-        DESTINATION cmake/WaraPSClient
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/WaraPSClient
 )
 
 configure_file(
