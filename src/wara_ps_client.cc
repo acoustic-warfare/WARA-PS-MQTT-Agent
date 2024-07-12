@@ -10,31 +10,38 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <utility>
 
-#define QOS_AT_LEAST_ONCE 1
+using namespace std::chrono;
+using namespace std::string_view_literals;
+
+constexpr bool QOS_AT_LEAST_ONCE{true};
 
 using json = nlohmann::json;
 
-const bool kRetain = false;
-const std::string TOPIC_PREFIX = "waraps/unit/ground/real/ljudkriget/";
+constexpr bool kRetain = false;
+constexpr auto TOPIC_PREFIX = "waraps/unit/ground/real/ljudkriget/"sv;
 
 std::string WaraPSClient::GenerateUUID() {
     boost::uuids::uuid uuid = boost::uuids::random_generator()();
     return boost::uuids::to_string(uuid);
 }
 
-std::string WaraPSClient::GenerateFullTopic(const std::string &topic) {
-    return TOPIC_PREFIX + topic;
+std::string WaraPSClient::GenerateFullTopic(std::string_view topic) {
+    std::string str;
+    str.reserve(TOPIC_PREFIX.length() + topic.length());
+    str += TOPIC_PREFIX;
+    str += topic;
+    return str;
 }
 
 std::string WaraPSClient::GenerateHeartBeatMessage() const {
     json j = {
-            {"agent-type", "surface"},
-            {"agent-uuid", kUUID},
-            {"levels",     {"sensor", "direct execution"}},
-            {"name",       "ljudkriget"},
-            {"rate",       heartbeat_interval.count() / 1000},
-            {"stamp",      (double) std::chrono::system_clock::now().time_since_epoch().count() / 1000.0},
-            {"type",       "HeartBeat"}};
+        {"agent-type", "surface"},
+        {"agent-uuid", kUUID},
+        {"levels",     {"sensor", "direct execution"}},
+        {"name",       "ljudkriget"},
+        {"rate",       duration_cast<milliseconds>(heartbeat_interval).count()},
+        {"stamp",      duration<double, std::milli>(std::chrono::system_clock::now().time_since_epoch()).count()},
+        {"type",       "HeartBeat"}};
 
     return j.dump(4); // Pretty print with 4 spaces indentation
 }
@@ -42,7 +49,7 @@ std::string WaraPSClient::GenerateHeartBeatMessage() const {
 void WaraPSClient::Start() {
 
     std::cout << "Creating client and connecting to server" << std::endl;
-    bool connected = client_.connect()->wait_for(std::chrono::seconds(5));
+    bool connected = client_.connect()->wait_for(5s);
     if (!connected) {
         throw std::runtime_error("Failed to connect to MQTT server");
     }
@@ -57,13 +64,13 @@ void WaraPSClient::Start() {
         while (*is_running_) {
             std::string heartbeat_message = GenerateHeartBeatMessage();
             client_.publish(heartbeat_topic, heartbeat_message, QOS_AT_LEAST_ONCE, kRetain);
-            sleep(1);
+            std::this_thread::sleep_for(1s);
         }
     });
 
     consume_thread_ = std::thread([this]() {
         while (*is_running_) {
-            auto msg = client_.try_consume_message_for(std::chrono::milliseconds(10));
+            auto msg = client_.try_consume_message_for(10ms);
             if (!msg && !is_running_) // Client has likely disconnected
                 break;
             if (!msg)
@@ -71,8 +78,8 @@ void WaraPSClient::Start() {
             try {
                 HandleMessage(msg);
             } catch (std::exception &e) {
-                std::cerr << "Failed to handle message: " << e.what() << std::endl;
-                std::cerr << "Message:\n" << msg->to_string() << std::endl;
+                std::cerr << "Failed to handle message: " << e.what()
+                          << "\nMessage:\n" << msg->to_string() << std::endl;
             }
         }
     });
@@ -121,7 +128,7 @@ void WaraPSClient::CmdPong(nlohmann::json msg_payload) {
     client_.publish(response_topic, response.dump(4), QOS_AT_LEAST_ONCE, kRetain);
 }
 
-void WaraPSClient::PublishMessage(const std::string &topic, const std::string &payload) {
+void WaraPSClient::PublishMessage(std::string_view topic, const std::string &payload) {
     std::string full_topic = GenerateFullTopic(topic);
     mqtt::delivery_token_ptr token = client_.publish(full_topic, payload, QOS_AT_LEAST_ONCE, kRetain);
 }
@@ -162,13 +169,13 @@ WaraPSClient::SetCommandCallback(const std::string &command, const std::function
         throw std::invalid_argument("Cannot set callback for reserved command: " + command);
     }
 
-    command_callbacks[command] = [callback](WaraPSClient *_, nlohmann::json msg_payload) {
+    command_callbacks[command] = [callback](WaraPSClient *, nlohmann::json msg_payload) {
         callback(std::move(msg_payload));
     };
 }
 
 void WaraPSClient::SetMessageCallback(const std::string &topic, const std::function<void(nlohmann::json)> &callback) {
-    SetMessageCallback(topic, [callback](WaraPSClient *_, nlohmann::json msg_payload) {
+    SetMessageCallback(topic, [callback](WaraPSClient *, nlohmann::json msg_payload) {
         callback(std::move(msg_payload));
     });
 }

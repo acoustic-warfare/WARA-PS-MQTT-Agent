@@ -1,10 +1,18 @@
 #ifndef waraps_client_H
 #define waraps_client_H
 
+#include <chrono>
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <thread>
+
 #include <mqtt/async_client.h>
 #include <nlohmann/json.hpp>
 
-#define DEFAULT_HEARTBEAT_INTERVAL 1000
+constexpr std::chrono::milliseconds DEFAULT_HEARTBEAT_INTERVAL {1'000};
 
 /**
  * A class to handle MQTT communication with the WARA PS MQTT broker.
@@ -15,14 +23,13 @@
  */
 class WaraPSClient {
 private:
-    const std::chrono::milliseconds heartbeat_interval =
-            std::chrono::milliseconds(DEFAULT_HEARTBEAT_INTERVAL);
+    inline static constexpr std::chrono::milliseconds heartbeat_interval = DEFAULT_HEARTBEAT_INTERVAL;
     const std::string kUUID = GenerateUUID();
     const std::string kUnitName, kServerAddress;
 
     std::string static GenerateUUID();
 
-    static std::string GenerateFullTopic(const std::string &topic);
+    static std::string GenerateFullTopic(std::string_view topic);
 
     std::string GenerateHeartBeatMessage() const;
 
@@ -50,15 +57,11 @@ public:
     WaraPSClient(std::string name, std::string server_address);
 
     /**
-     * Deleted constructors to disallow copying and moving of the client
+     * Deleted constructors to disallow copying and assignment of the client
      */
-    WaraPSClient(WaraPSClient &&) = delete;
-
     WaraPSClient(const WaraPSClient &) = delete;
 
     WaraPSClient &operator=(const WaraPSClient &) = delete;
-
-    WaraPSClient &operator=(WaraPSClient &&) = delete;
 
     ~WaraPSClient();
 
@@ -84,7 +87,7 @@ public:
      * @param topic The topic to publish the message to, will be added to WARA PS topic prefix
      * @param payload The message to publish as a JSON string
      */
-    void PublishMessage(const std::string &topic, const std::string &payload);
+    void PublishMessage(std::string_view topic, const std::string &payload);
 
     /**
      * Set an asynchronous callback function to be called when a message is received on the specified topic.
