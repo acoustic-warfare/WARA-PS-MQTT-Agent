@@ -1,18 +1,24 @@
 cmake_minimum_required(VERSION 3.23...3.29)
 
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 20)
+if (CMAKE_CXX_STANDARD LESS 20)
+    MESSAGE(FATAL_ERROR "C++20 or higher required!")
+elseif (NOT EXISTS CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 20)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+endif ()
+
 project(WaraPSClient VERSION 1.0
         DESCRIPTION "WaraPS Client"
         LANGUAGES CXX
 )
 
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 find_package(PahoMqttCpp REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
-add_library(WaraPSClient)
+add_library(WaraPSClient STATIC)
+add_library(WaraPSClient::WaraPSClient ALIAS WaraPSClient)
 target_sources(WaraPSClient
         PRIVATE
         src/wara_ps_client.cc
@@ -58,3 +64,12 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/WaraPSClientConfig.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/WaraPSClientConfigVersion.cmake
         DESTINATION cmake/WaraPSClient
 )
+
+configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/WaraPSClient.pc.in
+        ${CMAKE_CURRENT_BINARY_DIR}/cmake/WaraPSClient.pc
+        @ONLY
+)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cmake/WaraPSClient.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
