@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.23...3.29)
 
+if (${CMAKE_VERSION} VERSION_LESS 3.12)
+    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+endif ()
+
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 project(WaraPSClient VERSION 1.0
         DESCRIPTION "WaraPS Client"
         LANGUAGES CXX
@@ -8,9 +16,6 @@ project(WaraPSClient VERSION 1.0
 find_package(PahoMqttCpp REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CLANG_WARNINGS
         -Wall
@@ -51,7 +56,8 @@ else ()
     )
 endif ()
 
-add_library(WaraPSClient)
+add_library(WaraPSClient SHARED)
+add_library(WaraPSClient::WaraPSClient ALIAS WaraPSClient)
 target_sources(WaraPSClient
         PRIVATE
         src/wara_ps_client.cc
@@ -62,10 +68,12 @@ target_sources(WaraPSClient
         BASE_DIRS src
         FILES src/wara_ps_client.h
 )
+
 target_link_libraries(WaraPSClient PUBLIC
         PahoMqttCpp::paho-mqttpp3
         nlohmann_json::nlohmann_json
 )
+
 target_compile_options(WaraPSClient PRIVATE
         ${PROJECT_WARNINGS_CXX}
 )
@@ -100,3 +108,12 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/WaraPSClientConfig.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/WaraPSClientConfigVersion.cmake
         DESTINATION cmake/WaraPSClient
 )
+
+configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/WaraPSClient.pc.in
+        ${CMAKE_CURRENT_BINARY_DIR}/cmake/WaraPSClient.pc
+        @ONLY
+)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cmake/WaraPSClient.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
