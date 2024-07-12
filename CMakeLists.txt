@@ -17,7 +17,7 @@ project(WaraPSClient VERSION 1.0
 find_package(PahoMqttCpp REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
-add_library(WaraPSClient STATIC)
+add_library(WaraPSClient SHARED)
 add_library(WaraPSClient::WaraPSClient ALIAS WaraPSClient)
 target_sources(WaraPSClient
         PRIVATE
