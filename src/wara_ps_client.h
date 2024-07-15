@@ -12,7 +12,7 @@
 #include <mqtt/async_client.h>
 #include <nlohmann/json.hpp>
 
-constexpr std::chrono::milliseconds DEFAULT_HEARTBEAT_INTERVAL {1'000};
+constexpr std::chrono::milliseconds DEFAULT_HEARTBEAT_INTERVAL{1'000};
 
 /**
  * A class to handle MQTT communication with the WARA PS MQTT broker.
@@ -45,6 +45,7 @@ private:
     std::thread heartbeat_thread_, consume_thread_;
 
     mqtt::async_client client_;
+    mqtt::connect_options conn_opts_;
 
     std::shared_ptr<bool> is_running_ = std::make_shared<bool>(false);
     std::map<std::string, std::function<void(WaraPSClient *, nlohmann::json)>> message_callbacks{
@@ -55,6 +56,9 @@ private:
 
 public:
     WaraPSClient(std::string name, std::string server_address);
+
+    WaraPSClient(std::string name, std::string server_address, const std::string &username,
+                 const std::string &password);
 
     /**
      * Deleted constructors to disallow copying and assignment of the client

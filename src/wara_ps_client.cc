@@ -35,22 +35,23 @@ std::string WaraPSClient::GenerateFullTopic(std::string_view topic) {
 
 std::string WaraPSClient::GenerateHeartBeatMessage() const {
     json j = {
-        {"agent-type", "surface"},
-        {"agent-uuid", kUUID},
-        {"levels",     {"sensor", "direct execution"}},
-        {"name",       "ljudkriget"},
-        {"rate",       duration_cast<milliseconds>(heartbeat_interval).count()},
-        {"stamp",      duration<double, std::milli>(std::chrono::system_clock::now().time_since_epoch()).count()},
-        {"type",       "HeartBeat"}};
+            {"agent-type", "surface"},
+            {"agent-uuid", kUUID},
+            {"levels",     {"sensor", "direct execution"}},
+            {"name",       "ljudkriget"},
+            {"rate",       duration_cast<milliseconds>(heartbeat_interval).count()},
+            {"stamp",      duration<double, std::milli>(std::chrono::system_clock::now().time_since_epoch()).count()},
+            {"type",       "HeartBeat"}};
 
     return j.dump(4); // Pretty print with 4 spaces indentation
 }
 
 void WaraPSClient::Start() {
-
     std::cout << "Creating client and connecting to server" << std::endl;
-    bool connected = client_.connect()->wait_for(5s);
+    bool connected = client_.connect(conn_opts_)->wait_for(5s);
     if (!connected) {
+        *is_running_ = false;
+        client_.disconnect()->wait();
         throw std::runtime_error("Failed to connect to MQTT server");
     }
 
@@ -155,7 +156,11 @@ void WaraPSClient::Stop() {
 }
 
 WaraPSClient::WaraPSClient(std::string name, std::string server_address)
-        : kUnitName(std::move(name)), kServerAddress(std::move(server_address)), client_(kServerAddress, kUUID) {}
+        : kUnitName(std::move(name)), kServerAddress(std::move(server_address)), client_(kServerAddress, kUUID) {
+    conn_opts_ = mqtt::connect_options_builder()
+            .automatic_reconnect(true)
+            .finalize();
+}
 
 WaraPSClient::~WaraPSClient() {
     if (running()) {
@@ -178,4 +183,20 @@ void WaraPSClient::SetMessageCallback(const std::string &topic, const std::funct
     SetMessageCallback(topic, [callback](WaraPSClient *, nlohmann::json msg_payload) {
         callback(std::move(msg_payload));
     });
+}
+
+WaraPSClient::WaraPSClient(std::string name, std::string server_address, const std::string &username,
+                           const std::string &password)
+        : WaraPSClient(std::move(name), std::move(server_address)) {
+    auto sslOptions = mqtt::ssl_options_builder()
+            .enable_server_cert_auth(false)
+            .verify(false)
+            .finalize();
+
+    conn_opts_ = mqtt::connect_options_builder()
+            .password(password)
+            .user_name(username)
+            .ssl(sslOptions)
+            .automatic_reconnect(true)
+            .finalize();
 }
