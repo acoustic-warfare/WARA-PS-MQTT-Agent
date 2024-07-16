@@ -22,12 +22,23 @@ constexpr std::chrono::milliseconds DEFAULT_HEARTBEAT_INTERVAL{1'000};
  * Author: Janne Schyffert
  */
 class WaraPSClient {
-private:
+protected:
+    class Callback : public virtual mqtt::callback {
+        WaraPSClient &client_;
+
+        void message_arrived(mqtt::const_message_ptr msg) override;
+
+    public:
+        explicit Callback(WaraPSClient &client) : client_(client) {}
+    };
+
+    Callback callbackHandler_{*this};
+
     inline static constexpr std::chrono::milliseconds heartbeat_interval = DEFAULT_HEARTBEAT_INTERVAL;
     const std::string kUUID = GenerateUUID();
     const std::string kUnitName, kServerAddress;
 
-    std::string static GenerateUUID();
+    static std::string GenerateUUID();
 
     static std::string GenerateFullTopic(std::string_view topic);
 
@@ -42,7 +53,10 @@ private:
     // Commands get a separate function and map to allow different command callbacks as well as user-defined command callbacks
     void HandleCommand(nlohmann::json msg_payload);
 
-    std::thread heartbeat_thread_, consume_thread_;
+    std::thread heartbeat_thread_, publish_thread_;
+    std::vector<std::thread> data_threads;
+
+    std::queue<nlohmann::json> message_queue_;
 
     mqtt::async_client client_;
     mqtt::connect_options conn_opts_;
