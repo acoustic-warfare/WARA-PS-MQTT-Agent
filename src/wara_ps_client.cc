@@ -52,6 +52,7 @@ void WaraPSClient::Start() {
     if (!connected) {
         *is_running_ = false;
         client_.disconnect()->wait();
+        std::cout << "Failed to connect to server" << std::endl;
         throw std::runtime_error("Failed to connect to MQTT server");
     }
 
@@ -59,29 +60,14 @@ void WaraPSClient::Start() {
 
     client_.subscribe(GenerateFullTopic("exec/command"), QOS_AT_LEAST_ONCE)->wait();
     client_.start_consuming();
+    client_.set_callback(callbackHandler_);
     is_running_ = std::make_shared<bool>(true);
     heartbeat_thread_ = std::thread([this]() {
         std::string heartbeat_topic = GenerateFullTopic("heartbeat");
         while (*is_running_) {
             std::string heartbeat_message = GenerateHeartBeatMessage();
             client_.publish(heartbeat_topic, heartbeat_message, QOS_AT_LEAST_ONCE, kRetain);
-            std::this_thread::sleep_for(1s);
-        }
-    });
-
-    consume_thread_ = std::thread([this]() {
-        while (*is_running_) {
-            auto msg = client_.try_consume_message_for(10ms);
-            if (!msg && !is_running_) // Client has likely disconnected
-                break;
-            if (!msg)
-                continue;
-            try {
-                HandleMessage(msg);
-            } catch (std::exception &e) {
-                std::cerr << "Failed to handle message: " << e.what()
-                          << "\nMessage:\n" << msg->to_string() << std::endl;
-            }
+            std::this_thread::sleep_for(milliseconds(DEFAULT_HEARTBEAT_INTERVAL));
         }
     });
 }
@@ -152,7 +138,6 @@ void WaraPSClient::Stop() {
     heartbeat_thread_.join();
     client_.stop_consuming();
     client_.disconnect()->wait();
-    consume_thread_.join();
 }
 
 WaraPSClient::WaraPSClient(std::string name, std::string server_address)
@@ -199,4 +184,13 @@ WaraPSClient::WaraPSClient(std::string name, std::string server_address, const s
             .ssl(sslOptions)
             .automatic_reconnect(true)
             .finalize();
+}
+
+void WaraPSClient::Callback::message_arrived(mqtt::const_message_ptr msg) {
+    try {
+        client_.HandleMessage(msg);
+    } catch (std::exception &e) {
+        std::cerr << "Failed to handle message: " << e.what()
+                  << "\nMessage:\n" << msg->to_string() << std::endl;
+    }
 }
