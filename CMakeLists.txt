@@ -1,8 +1,4 @@
-cmake_minimum_required(VERSION 3.23...3.29)
-
-if (${CMAKE_VERSION} VERSION_LESS 3.12)
-    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
-endif ()
+cmake_minimum_required(VERSION 3.20...3.29)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 20)
