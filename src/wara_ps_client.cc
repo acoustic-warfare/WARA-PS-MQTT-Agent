@@ -18,7 +18,6 @@ constexpr bool QOS_AT_LEAST_ONCE{true};
 using json = nlohmann::json;
 
 constexpr bool kRetain = false;
-constexpr auto TOPIC_PREFIX = "waraps/unit/ground/real/ljudkriget/"sv;
 
 std::string WaraPSClient::GenerateUUID() {
     boost::uuids::uuid uuid = boost::uuids::random_generator()();
@@ -27,8 +26,8 @@ std::string WaraPSClient::GenerateUUID() {
 
 std::string WaraPSClient::GenerateFullTopic(std::string_view topic) {
     std::string str;
-    str.reserve(TOPIC_PREFIX.length() + topic.length());
-    str += TOPIC_PREFIX;
+    str.reserve(kTopic_Prefix.length() + topic.length());
+    str += kTopic_Prefix;
     str += topic;
     return str;
 }
@@ -38,7 +37,7 @@ std::string WaraPSClient::GenerateHeartBeatMessage() const {
             {"agent-type", "surface"},
             {"agent-uuid", kUUID},
             {"levels",     {"sensor", "direct execution"}},
-            {"name",       "ljudkriget"},
+            {"name",       kUnitName},
             {"rate",       duration_cast<milliseconds>(heartbeat_interval).count()},
             {"stamp",      duration<double, std::milli>(std::chrono::system_clock::now().time_since_epoch()).count()},
             {"type",       "HeartBeat"}};
@@ -48,11 +47,14 @@ std::string WaraPSClient::GenerateHeartBeatMessage() const {
 
 void WaraPSClient::Start() {
     std::cout << "Creating client and connecting to server" << std::endl;
-    bool connected = client_.connect(conn_opts_)->wait_for(5s);
-    if (!connected) {
+    try {
+        bool connected = client_.connect(conn_opts_)->wait_for(5s);
+        if (!connected) {
+            throw mqtt::exception(-1);
+        }
+    } catch (mqtt::exception &e) {
         *is_running_ = false;
-        client_.disconnect()->wait();
-        std::cout << "Failed to connect to server" << std::endl;
+        std::cerr << "Failed to connect to server" << std::endl;
         throw std::runtime_error("Failed to connect to MQTT server");
     }
 
@@ -141,7 +143,9 @@ void WaraPSClient::Stop() {
 }
 
 WaraPSClient::WaraPSClient(std::string name, std::string server_address)
-        : kUnitName(std::move(name)), kServerAddress(std::move(server_address)), client_(kServerAddress, kUUID) {
+        : kUnitName(std::move(name)), kServerAddress(std::move(server_address)),
+          kTopic_Prefix("waraps/unit/ground/real/" + kUnitName + "/"),
+          client_(kServerAddress, kUUID) {
     conn_opts_ = mqtt::connect_options_builder()
             .automatic_reconnect(true)
             .finalize();

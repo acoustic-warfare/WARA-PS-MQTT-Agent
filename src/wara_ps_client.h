@@ -36,11 +36,11 @@ protected:
 
     inline static constexpr std::chrono::milliseconds heartbeat_interval = DEFAULT_HEARTBEAT_INTERVAL;
     const std::string kUUID = GenerateUUID();
-    const std::string kUnitName, kServerAddress;
+    const std::string kUnitName, kServerAddress, kTopic_Prefix;
 
     static std::string GenerateUUID();
 
-    static std::string GenerateFullTopic(std::string_view topic);
+    std::string GenerateFullTopic(std::string_view topic);
 
     std::string GenerateHeartBeatMessage() const;
 
