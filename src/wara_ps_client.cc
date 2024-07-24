@@ -45,7 +45,7 @@ std::string WaraPSClient::GenerateHeartBeatMessage() const {
 }
 std::string WaraPSClient::GenerateTaskMessage() {
     json j = {
-            {"name", "piraya0"},
+            {"name", kUnitName},
             {"rate", 1.0},
             {"type", "DirectExecutionInfo"},
             {"stamp", system_clock::now().time_since_epoch().count() / 1000},
@@ -105,8 +105,17 @@ void WaraPSClient::HandleMessage(const mqtt::const_message_ptr &msg) {
 }
 
 void WaraPSClient::CmdStartTask(nlohmann::json msg_payload) {
+    /*
+     * Denna är lite udda
+     * WARA-PS API specificerar aldrig riktigt hur en task-execution ser ut så jag spitballar lite kring responsen och i
+     * vilken ordning saker ska göras. För att använda "på riktigt" bör task-systemet ses över konkret. Så länge funkar
+     * det...?
+     */
+
     json task = msg_payload["task"];
     task["uuid"] = msg_payload["task-uuid"];
+
+    executingTasks_.push_back(task);
 
     task_callbacks_[task["name"]](this, task);
 
