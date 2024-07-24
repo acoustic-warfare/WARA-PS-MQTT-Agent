@@ -186,11 +186,8 @@ void WaraPSClient::CreateTask(json taskJson, const std::function<void(nlohmann::
     availableTasks_.push_back(std::move(taskJson));
 }
 
-void WaraPSClient::SubscribeToTopic(const std::string_view topic) {
-    client_.subscribe(topic.data(), QOS_AT_LEAST_ONCE)->wait();
-}
-
 void WaraPSClient::SetMessageCallback(const std::string &topic, const std::function<void(nlohmann::json)> &callback) {
+    client_.subscribe(topic, QOS_AT_LEAST_ONCE)->wait();
     SetMessageCallback(topic,
                        [callback](WaraPSClient *, nlohmann::json msg_payload) { callback(std::move(msg_payload)); });
 }

@@ -143,6 +143,7 @@ public:
     /**
      * Set an asynchronous callback function to be called when a message is received on the specified topic.
      * Disallows setting the "command" topic callback, see set_command_callback for that.
+     * Will automatically subscribe to the given topic if not already subscribed
      * @param topic the topic to listen on, will be added to WARA PS topic prefix.
      * @param callback the function to call when a message is received on the specified topic
      * @throws std::invalid_argument if the topic is "exec/command"
@@ -167,7 +168,5 @@ public:
      * argument
      */
     void CreateTask(nlohmann::json taskJson, const std::function<void(nlohmann::json)> &callback);
-
-    void SubscribeToTopic(std::string_view topic);
 };
 #endif
