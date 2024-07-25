@@ -113,6 +113,3 @@ configure_file(
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cmake/WaraPSClient.pc
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-add_executable(main src/main.cpp
-        src/main.cpp)
-target_link_libraries(main PRIVATE WaraPSClient::WaraPSClient)
