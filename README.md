@@ -23,7 +23,7 @@ sudo make install
 
 ## Usage
 
-Create a client object with a given name and MQTT broker adress and call the `start()` member function to run the
+Create a client object with a given name and MQTT broker address and call the `start()` member function to run the
 client, this will occupy the main thread until aborted.
 
 Example:
@@ -69,5 +69,5 @@ int main() {
 
 ## Tasks
 
-The use of "tasks" in the WARA PS API is not very well defined and this library needs some specifics regarding how to
+The use of "tasks" in the WARA PS API is not very well-defined and this library needs some specifics regarding how to
 use them. The current implementation is a placeholder and will be updated when more information is available.
