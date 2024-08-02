@@ -10,6 +10,8 @@ The following libraries are needed:
 - nlohmann/json
 - boost/uuid
 
+Cmake 3.23 or higher is also required.
+
 ## Installing the library
 
 To install the library, install the needed dependencies and run:
